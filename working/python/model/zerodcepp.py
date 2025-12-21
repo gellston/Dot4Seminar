@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 
-from block import DepthwiseSeparableConv
+from model.block import DepthwiseSeparableConv
 
 
 class ZeroDCEPP(nn.Module):
