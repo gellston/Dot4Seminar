@@ -22,11 +22,11 @@ learning_rate = 0.003
 weight_decay = 0.0001
 batch_size = 5
 scale_factor = 4
-
 num_features = 32
 image_width = 1024
 image_height = 1024
 image_channel = 3
+
 dataset_path = "C://github//dataset//lol_dataset//our485//all"
 weight_path = "C://github//Dot4Seminar//working//python//results//weights.pth"
 onnx_model_path = "C://github//Dot4Seminar//working//python//results//model.onnx"
