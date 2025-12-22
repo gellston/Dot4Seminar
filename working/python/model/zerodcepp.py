@@ -8,7 +8,7 @@ from model.block import DepthwiseSeparableConv
 
 
 class ZeroDCEPP(nn.Module):
-    def __init__(self, scale_factor=1, num_features=32):
+    def __init__(self, scale_factor=4, num_features=32):
         super(ZeroDCEPP, self).__init__()
 
         self.relu = nn.ReLU(inplace=True)

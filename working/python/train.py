@@ -1,11 +1,14 @@
 import torch
 import torch.onnx
-
+import numpy as np
+import cv2
+import os
 
 
 from model.zerodcepp import ZeroDCEPP
 from loss.zerodce_loss import ZeroDCETotalLoss
 from dataset.lle_dataset import get_lle_loader
+from model.onnx_model import OnnxModel
 
 
 
@@ -14,13 +17,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"현재 사용 중인 디바이스: {device}")
 
 
-
-
 # Hyper Parameter
-epochs = 100
-learning_rate = 0.003
+epochs = 50
+learning_rate = 0.0001
 weight_decay = 0.0001
-batch_size = 5
+batch_size = 8
 scale_factor = 4
 num_features = 32
 image_width = 1024
@@ -36,7 +37,9 @@ dummy_input = torch.randn(size=(1, image_channel, image_height, image_width)).to
 
 model = ZeroDCEPP(scale_factor=scale_factor, num_features=num_features)
 model = model.to(device)
-
+if os.path.exists(weight_path):
+    state_dict = torch.load(weight_path, map_location=device)
+    model.load_state_dict(state_dict)
 
 
 dataloader = get_lle_loader(dataset_path, batch_size, resize_shape=(image_height, image_width))
@@ -66,15 +69,36 @@ for epoch in range(epochs):
 
         avg_loss += current_loss.item() / total_batches
 
+    tensor_input_check = gpu_x_image[0]
+    tensor_output_check = enhanced_img[0]
+    # 1. CPU 이동 및 Numpy 변환
+    input = tensor_input_check.detach().cpu().numpy()
+    input = np.transpose(input, (1, 2, 0))
+    input = (input * 255).astype(np.uint8)
+    input = cv2.cvtColor(input, cv2.COLOR_RGB2BGR)
+
+    # 1. CPU 이동 및 Numpy 변환
+    output = tensor_output_check.detach().cpu().numpy()
+    output = np.transpose(output, (1, 2, 0))
+    output = (output * 255).astype(np.uint8)
+    output = cv2.cvtColor(output, cv2.COLOR_RGB2BGR)
+
+
+    # 5. 시각화
+    cv2.imshow("original", input)
+    cv2.imshow("output", output)
+    cv2.waitKey(1) # 1ms 대기 (학습 루프 멈춤 방지)
+
     if temp_loss > avg_loss:
         temp_loss = avg_loss
         
         model.eval()
+    
+        onnx_model = OnnxModel(backbone=model)
 
         torch.save(model.state_dict(), weight_path)
-
         torch.onnx.export(
-            model,                      # 실행할 모델
+            onnx_model,                      # 실행할 모델
             dummy_input,                # 모델 입력 예시
             onnx_model_path,            # 저장 파일명
             export_params=True,         # 모델 파일 안에 학습된 파라미터 저장
