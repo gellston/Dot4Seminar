@@ -90,12 +90,21 @@ class TotalVariationLoss(nn.Module):
 
 
 class ZeroDCETotalLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, 
+                 spa_weight=1.0, 
+                 exp_patch_size=16, 
+                 exp_target_mean=0.6, 
+                 col_weight=10.0, 
+                 tv_weight=200.0):
         super(ZeroDCETotalLoss, self).__init__()
+        
         self.spatial_loss = SpatialConstancyLoss()
-        self.exposure_loss = ExposureControlLoss(patch_size=16, target_intensity=0.6)
+        self.exposure_loss = ExposureControlLoss(patch_size=exp_patch_size, target_intensity=exp_target_mean)
         self.color_loss = ColorConstancyLoss()
-        self.tv_loss = TotalVariationLoss(weight=200)
+        self.tv_loss = TotalVariationLoss(weight=tv_weight)
+        
+        self.spa_weight = spa_weight
+        self.col_weight = col_weight
 
     def forward(self, original, enhanced, curve_params):
         loss_s = self.spatial_loss(original, enhanced)
@@ -103,6 +112,6 @@ class ZeroDCETotalLoss(nn.Module):
         loss_c = self.color_loss(enhanced)
         loss_t = self.tv_loss(curve_params)
         
-        # 각 손실 함수의 가중치 합산
-        total_loss = loss_s + loss_e + (10 * loss_c) + loss_t
+        total_loss = (self.spa_weight * loss_s) + loss_e + (self.col_weight * loss_c) + loss_t
+                     
         return total_loss

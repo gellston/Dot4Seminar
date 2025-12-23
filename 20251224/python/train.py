@@ -4,18 +4,14 @@ import numpy as np
 import cv2
 import os
 
-
 from model.zerodcepp import ZeroDCEPP
 from loss.zerodce_loss import ZeroDCETotalLoss
 from dataset.lle_dataset import get_lle_loader
 from model.onnx_model import OnnxModel
 
-
-
 # GPU 사용 가능 여부 확인
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"현재 사용 중인 디바이스: {device}")
-
 
 # Hyper Parameter
 epochs = 50
@@ -27,6 +23,12 @@ num_features = 32
 image_width = 1024
 image_height = 1024
 image_channel = 3
+
+spa_weight=1.0
+exp_patch_size=16
+exp_target_mean=0.5
+col_weight=10.0
+tv_weight=200.0
 
 dataset_path = "C://github//dataset//lol_dataset//our485//all"
 weight_path = "C://github//Dot4Seminar//working//python//results//weights.pth"
@@ -46,7 +48,11 @@ dataloader = get_lle_loader(dataset_path, batch_size, resize_shape=(image_height
 total_batches = len(dataloader)
 
 
-loss = ZeroDCETotalLoss().to(device)
+loss = ZeroDCETotalLoss(spa_weight=spa_weight,
+                        exp_patch_size=exp_patch_size,
+                        exp_target_mean=exp_target_mean,
+                        col_weight=col_weight,
+                        tv_weight=tv_weight).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
 temp_loss = 1000000
@@ -56,12 +62,9 @@ for epoch in range(epochs):
     model.train()
     for i, x_image in enumerate(dataloader):
 
-
         gpu_x_image = x_image.to(device)
         enhanced_img, curve_params = model(gpu_x_image)
         current_loss = loss(gpu_x_image, enhanced_img, curve_params)
-
-
 
         optimizer.zero_grad()
         current_loss.backward()
@@ -107,9 +110,7 @@ for epoch in range(epochs):
             input_names=['input'],      # 입력 노드 이름 (C++에서 호출 시 사용)
             output_names=['output'],    # 출력 노드 이름
         )
-
-
-
+        
     print('current avg loss = ', avg_loss)
 
 
